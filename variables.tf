@@ -3,16 +3,16 @@ variable "jira_projects" {
 }
 
 variable "jira_url" {
-  type = string
+  type      = string
   sensitive = true
 }
 
 variable "jira_token" {
-  type = string
+  type      = string
   sensitive = true
 }
 
 variable "jira_user" {
-  type = string
+  type      = string
   sensitive = true
 }
