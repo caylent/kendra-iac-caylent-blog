@@ -1,19 +1,15 @@
-variable "jira_user" {
-  type = string
-}
-
-variable "jira_token" {
-  type = string
-}
-
 resource "aws_secretsmanager_secret" "jira_secret" {
   name = "jira-secret"
 }
 
-resource "aws_secretsmanager_secret_version" "example" {
+resource "aws_secretsmanager_secret_version" "jira_secret_version" {
   secret_id = aws_secretsmanager_secret.jira_secret.id
   secret_string = jsonencode({
-    user  = var.jira_user,
-    token = var.jira_token
+    jiraId  = var.jira_user,
+    jiraCredential = var.jira_token
   })
+}
+
+data "aws_kms_key" "secrets_manager" {
+  key_id = "alias/aws/secretsmanager"
 }

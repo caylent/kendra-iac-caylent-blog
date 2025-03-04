@@ -1,3 +1,4 @@
+# --------- kendra role and policy ---------
 data "aws_iam_policy_document" "kendra_assume_role" {
   statement {
     effect = "Allow"
@@ -16,7 +17,7 @@ resource "aws_iam_role" "kendra_role" {
 }
 
 resource "aws_iam_policy" "kendra_policy" {
-  name = "${terraform.workspace}-kendra-policy"
+  name = "kendra-policy"
   path = "/service-role/"
   policy = jsonencode({
     Version = "2012-10-17"
@@ -30,9 +31,15 @@ resource "aws_iam_policy" "kendra_policy" {
         }
       },
       {
-        Effect   = "Allow"
-        Action   = ["logs:DescribeLogGroups", "logs:CreateLogGroup", "logs:DescribeLogStreams", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "*"
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogGroups",
+          "logs:CreateLogGroup",
+          "logs:DescribeLogStreams",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:us-west-2:${local.account_id}:log-group:/aws/kendra/*"
       }
     ]
   })
@@ -43,9 +50,17 @@ resource "aws_iam_role_policy_attachment" "kendra_policy_attachment" {
   policy_arn = aws_iam_policy.kendra_policy.arn
 }
 
+# --------- kendra index ---------
 resource "aws_kendra_index" "this" {
   name        = "rag-chatbot-index"
   description = "Kendra index for RAG chatbot"
   edition     = "DEVELOPER_EDITION"
   role_arn    = aws_iam_role.kendra_role.arn
+}
+
+# --------- Jira Data Source ---------
+resource "aws_kendra_data_source" "custom_jira" {
+  index_id = aws_kendra_index.this.id
+  name     = "custom-jira"
+  type     = "CUSTOM"
 }
