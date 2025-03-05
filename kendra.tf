@@ -1,4 +1,4 @@
-# --------- kendra role and policy ---------
+# --------- IAM Roles and Policies ---------
 data "aws_iam_policy_document" "kendra_assume_role" {
   statement {
     effect = "Allow"
@@ -14,11 +14,14 @@ resource "aws_iam_role" "kendra_role" {
   name               = "kendra-role"
   path               = "/service-role/"
   assume_role_policy = data.aws_iam_policy_document.kendra_assume_role.json
+  description        = "IAM role for Kendra index and data source operations"
 }
 
 resource "aws_iam_policy" "kendra_policy" {
-  name = "kendra-policy"
-  path = "/service-role/"
+  name        = "kendra-policy"
+  path        = "/service-role/"
+  description = "Policy for Kendra to access CloudWatch logs and metrics"
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -39,7 +42,7 @@ resource "aws_iam_policy" "kendra_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:us-west-2:${local.account_id}:log-group:/aws/kendra/*"
+        Resource = "arn:aws:logs:${local.region}:${local.account_id}:log-group:/aws/kendra/*"
       }
     ]
   })
@@ -50,7 +53,7 @@ resource "aws_iam_role_policy_attachment" "kendra_policy_attachment" {
   policy_arn = aws_iam_policy.kendra_policy.arn
 }
 
-# --------- kendra index ---------
+# --------- Kendra Index ---------
 resource "aws_kendra_index" "this" {
   name        = "rag-chatbot-index"
   description = "Kendra index for RAG chatbot"
@@ -60,7 +63,8 @@ resource "aws_kendra_index" "this" {
 
 # --------- Jira Data Source ---------
 resource "aws_kendra_data_source" "custom_jira" {
-  index_id = aws_kendra_index.this.id
-  name     = "custom-jira"
-  type     = "CUSTOM"
+  index_id    = aws_kendra_index.this.id
+  name        = "custom-jira"
+  description = "Custom Kendra connector for Jira integration"
+  type        = "CUSTOM"
 }

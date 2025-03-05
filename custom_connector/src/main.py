@@ -100,7 +100,7 @@ def lambda_handler(event, context):
     try:
         return handler(event)
     except Exception as e:
-        logger.error(f"Error in lambda handler: {e}")
+        logger.error(f"Error in lambda handler: {e}", exc_info=True)
 
         event_bridge_event_details = event.get("detail")
         index_id = event_bridge_event_details.get("index_id")

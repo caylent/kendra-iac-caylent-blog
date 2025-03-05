@@ -7,7 +7,6 @@ logger.setLevel("INFO")
 def log_retry(retry_state):
     logger.info(f"Retrying request  after {retry_state['backoff_time']} seconds.")
 
-
 class LoggingRetry(Retry):
     def sleep(self, response=None):
         if response:
