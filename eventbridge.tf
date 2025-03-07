@@ -50,7 +50,7 @@ resource "aws_scheduler_schedule" "jira_schedule" {
     input = jsonencode({
       detail = {
         data_source_name = "jira"
-        data_source_id   = "${aws_kendra_data_source.custom_jira.id}"
+        data_source_id   = "${aws_kendra_data_source.custom_jira.data_source_id}"
         index_id         = "${aws_kendra_index.this.id}"
       }
     })

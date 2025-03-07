@@ -1,9 +1,13 @@
 from abc import ABC, abstractmethod
+import json
 import time
 import urllib3
+import os
 import logging
 
 from Retry.Retry import LoggingRetry
+
+CUSTOM_CONNECTOR_SELF_INVOKE_EVENT_SOURCE = os.environ.get("CUSTOM_CONNECTOR_SELF_INVOKE_EVENT_SOURCE")
 
 class CustomConnector(ABC):
     def __init__(self, data_source_id, index_id, kendra_job_execution_id, ssm_name, clients):
@@ -16,6 +20,7 @@ class CustomConnector(ABC):
         self.kendra_client = clients["kendra"]
         self.secrets_manager_client = clients["secrets_manager"]
         self.ssm_client = clients["parameter_store"]
+        self.eventbridge_client = clients["eventbridge"]
 
         self.last_crawled_timestamp = self.retrieve_last_crawled_timestamp()
         self._is_sync_done = False
@@ -63,6 +68,21 @@ class CustomConnector(ABC):
             batch = documents[i : i + 10]
             self.kendra_client.batch_put_document(IndexId=self.index_id, Documents=batch)
 
+    def put_event_bridge_event(self, index_id, data_source_name, data_source_id, next_page_token):
+        self.eventbridge_client.put_events(Entries=[
+            {
+                "Source": CUSTOM_CONNECTOR_SELF_INVOKE_EVENT_SOURCE,
+                "DetailType": "SelfInvocation",
+                "Detail": json.dumps({
+                    "index_id": index_id,
+                    "data_source_name": data_source_name,
+                    "data_source_id": data_source_id,
+                    "next_page_token": next_page_token,
+                    "kendra_job_execution_id": self.get_execution_id()
+                })
+            }
+        ])
+
     def get_execution_id(self):
         return self._kendra_job_execution_id
 
@@ -80,6 +100,9 @@ class CustomConnector(ABC):
             return 1.0
         except Exception as e:
             raise Exception(f"Error retrieving last crawled timestamp: {e} from {self.ssm_name}")
+
+    def update_last_crawled_timestamp(self):
+        self.ssm_client.put_parameter(Name=self.ssm_name, Value=str(time.time()), Type="String", Overwrite=True)
         
     def _build_url_session(self):
         retry_strategy = LoggingRetry(

@@ -1,4 +1,3 @@
-import json
 import boto3
 import logging
 import os
@@ -7,7 +6,6 @@ import time
 from CustomConnectors.JiraConnector import JiraConnector
 
 LAST_CRAWLED_SSM_NAME = os.environ.get("LAST_CRAWLED_SSM_NAME")
-CUSTOM_CONNECTOR_SELF_INVOKE_EVENT_SOURCE = os.environ.get("CUSTOM_CONNECTOR_SELF_INVOKE_EVENT_SOURCE")
 
 logger = logging.getLogger(__name__)
 logger.setLevel("INFO")
@@ -51,12 +49,7 @@ def handler(event):
             next_page = next_page_token
 
             if custom_connector.get_is_sync_done():
-                boto3_clients["parameter_store"].put_parameter(
-                    Name=custom_connector.ssm_name,
-                    Value=str(time.time()),
-                    Type="String",
-                    Overwrite=True,
-                )
+                custom_connector.update_last_crawled_timestamp()
                 break
     except Exception as e:
         custom_connector.stop_sync()
@@ -66,23 +59,7 @@ def handler(event):
         custom_connector.stop_sync()
     else:
         try:
-            response = boto3_clients["eventbridge"].put_events(
-                Entries=[
-                    {
-                        "Source": CUSTOM_CONNECTOR_SELF_INVOKE_EVENT_SOURCE,
-                        "DetailType": "SelfInvocation",
-                        "Detail": json.dumps(
-                            {
-                                "index_id": index_id,
-                                "data_source_name": data_source_name,
-                                "data_source_id": data_source_id,
-                                "next_page_token": next_page,
-                                "kendra_job_execution_id": custom_connector.get_execution_id()
-                            }
-                        ),
-                    }
-                ]
-            )
+            response = custom_connector.put_event_bridge_event(index_id, data_source_name, data_source_id, next_page)
             logger.info(f"Lambda is continuing with next page token: {next_page} - EventBridge response: {response}")
             return {
                 "statusCode": 200,
