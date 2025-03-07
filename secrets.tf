@@ -1,5 +1,6 @@
 resource "aws_secretsmanager_secret" "jira_secret" {
-  name = "jira-secret"
+  name                    = "jira-secret"
+  recovery_window_in_days = 0 # Force delete without recovery
 }
 
 resource "aws_secretsmanager_secret_version" "jira_secret_version" {
